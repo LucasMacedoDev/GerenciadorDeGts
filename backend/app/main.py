@@ -1,4 +1,5 @@
 import os, json, uuid, shutil
+import importlib.util
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Literal
@@ -94,13 +95,19 @@ def classify(embedding,people):
 
 @app.get('/api/health')
 def health():
-    try:
-        recog.deepface()
-        available=True; error=None
-    except Exception as e:
-        available=False; error=str(e)
-    return {'api':'ok','deepface_importable':available,'deepface_error':error,'model':recog.MODEL,'detector':recog.DETECTOR,'cosine_threshold':recog.THRESHOLD,
-            'notice':'Primeira análise pode baixar pesos de modelos da internet.'}
+    # Verifica se o pacote existe sem importar o DeepFace/TensorFlow.
+    available = importlib.util.find_spec('deepface') is not None
+
+    return {
+        'api': 'ok',
+        'deepface_importable': available,
+        'deepface_error': None if available else 'Pacote DeepFace não instalado.',
+        'model': recog.MODEL,
+        'detector': recog.DETECTOR,
+        'cosine_threshold': recog.THRESHOLD,
+        'notice': 'Os modelos de IA serão carregados somente quando necessários.'
+    }
+
 
 @app.get('/api/people')
 def get_people(user:User=Depends(require_user)):
